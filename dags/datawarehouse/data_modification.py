@@ -27,7 +27,7 @@ def insert_rows(cur, conn, schema, row):
                 f"""
                 INSERT INTO {schema}.{table} 
                 ("Video_ID", "Video_Title", "Upload_Date", "Duration", "Video_Type", "Video_Views", "Likes_Count", "Comments_Count")
-                VALUES (%Video_ID)s, %(Video_Title)s, %(Upload_Date)s, %(Duration)s, %(Video_Type)s, %(Video_Views)s, %(Likes_Count)s, %(Comments_Count)s);
+                VALUES (%(Video_ID)s, %(Video_Title)s, %(Upload_Date)s, %(Duration)s, %(Video_Type)s, %(Video_Views)s, %(Likes_Count)s, %(Comments_Count)s);
                 """, row
             )
 
@@ -51,7 +51,6 @@ def update_rows(cur, conn, schema, row):
             video_views = 'viewCount'
             likes_count = 'likeCount'
             comments_count = 'commentCount'
-            )
         #core
         else:
             video_id = 'Video_ID'
@@ -72,7 +71,7 @@ def update_rows(cur, conn, schema, row):
             WHERE "Video_ID" = %({video_id})s
             AND "Upload_Date" = %({upload_date})s;
             """, row
-        )
+            )
 
         conn.commit()
 
