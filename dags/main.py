@@ -33,7 +33,7 @@ with DAG(
     dag_id='produce_json',
     default_args=default_args,
     description='A DAG to extract YouTube video stats and save to JSON',
-    schedule_interval='0 14 * * *',  # Daily at 14:00 UTC,
+    schedule='0 14 * * *',  # Daily at 14:00 UTC,
     catchup=False
 ) as dag:
     
@@ -51,7 +51,7 @@ with DAG(
     dag_id='update_db',
     default_args=default_args,
     description='A DAG to process JSON file and insert data into both staging and core schemas',
-    schedule_interval='0 15 * * *',  # Daily at 15:00 UTC,
+    schedule='0 15 * * *',  # Daily at 15:00 UTC,
     catchup=False
 ) as dag:
     
@@ -68,7 +68,7 @@ with DAG(
     dag_id='data_quality',
     default_args=default_args,
     description='A DAG to check the data quality of staging and core schemas in the db',
-    schedule_interval='0 16 * * *',  # Daily at 16:00 UTC,
+    schedule='0 16 * * *',  # Daily at 16:00 UTC,
     catchup=False
 ) as dag:
     
