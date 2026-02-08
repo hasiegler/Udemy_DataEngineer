@@ -81,16 +81,16 @@ def update_rows(cur, conn, schema, row):
         logger.error(f"Error updating row with Video_ID: {row[video_id]} - {e}")
         raise e
     
-def delete_rows(cur, conn, schema, row, ids_to_delete):
+def delete_rows(cur, conn, schema, ids_to_delete):
     
     try:
         
-        ids_to_delete = f"""({', '.join(f"'{id}'" for id in ids_to_delete)})"""
+        ids_formatted = f"""({', '.join(f"'{id}'" for id in ids_to_delete)})"""
 
         cur.execute(
             f"""
             DELETE FROM {schema}.{table}
-            WHERE "Video_ID" IN {ids_to_delete};
+            WHERE "Video_ID" IN {ids_formatted};
             """
         )
 

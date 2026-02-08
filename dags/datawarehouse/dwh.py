@@ -70,7 +70,8 @@ def core_table():
         create_schema(schema)
         create_table(schema)
 
-        table_ids = get_video_ids(cur, schema)
+        table_ids = set(get_video_ids(cur, schema))
+        ids_in_core = set(table_ids)
 
         current_video_ids = set()
 
@@ -80,19 +81,15 @@ def core_table():
         for row in rows:
 
             current_video_ids.add(row['Video_ID'])
+            transformed_row = transform_data(row)
+            video_id = transformed_row['Video_ID']
 
-            if len(table_ids) == 0:
-                transformed_row = transform_data(row)
+            if video_id in ids_in_core:
+                update_rows(cur, conn, schema, transformed_row)
+            else:
                 insert_rows(cur, conn, schema, transformed_row)
 
-            else:
-                transformed_row = transform_data(row)
-
-                if transformed_row['Video_ID'] in table_ids:
-                    update_rows(cur, conn, schema, transformed_row)
-
-                else:
-                    insert_rows(cur, conn, schema, transformed_row)
+            ids_in_core.add(video_id)
 
         ids_to_delete = set(table_ids) - current_video_ids
 
