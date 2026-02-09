@@ -4,7 +4,7 @@ from psycopg2.extras import RealDictCursor
 table = "yt_api"
 
 def get_conn_cursor():
-    hook = PostgresHook(postgres_conn_id="POSTGRES_DB_YT_ELT", database="elt_db")
+    hook = PostgresHook(postgres_conn_id="POSTGRES_DB_YT_ELT", database="postgres")
     conn = hook.get_conn()
     cur = conn.cursor(cursor_factory=RealDictCursor)
     return conn, cur

@@ -57,10 +57,10 @@ x-airflow-common:
     &airflow-common-env
     # Set executor to CeleryExecutor 
     AIRFLOW__CORE__EXECUTOR: CeleryExecutor
-    # Use SQLAlchemy to connect to Airflow's metadata Postgres database using the psycopg2 driver
-    AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://${METADATA_DATABASE_USERNAME}:${METADATA_DATABASE_PASSWORD}@${POSTGRES_CONN_HOST}:${POSTGRES_CONN_PORT}/${METADATA_DATABASE_NAME}
-    # Postgres database backend for storing task results executed by workers
-    AIRFLOW__CELERY__RESULT_BACKEND: db+postgresql://${CELERY_BACKEND_USERNAME}:${CELERY_BACKEND_PASSWORD}@${POSTGRES_CONN_HOST}:${POSTGRES_CONN_PORT}/${CELERY_BACKEND_NAME}
+    # Use SQLAlchemy to connect to Airflow's metadata in Supabase (schema: airflow_metadata)
+    AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://${SUPABASE_USER}:${SUPABASE_PASSWORD}@${SUPABASE_HOST}:${SUPABASE_PORT}/${SUPABASE_DB}?options=-csearch_path%3Dairflow_metadata
+    # Supabase database backend for storing Celery task results (schema: celery_results)
+    AIRFLOW__CELERY__RESULT_BACKEND: db+postgresql://${SUPABASE_USER}:${SUPABASE_PASSWORD}@${SUPABASE_HOST}:${SUPABASE_PORT}/${SUPABASE_DB}?options=-csearch_path%3Dcelery_results
     # URL for the Redis message broker - handles the communication and task distribution between the scheduler and workers
     AIRFLOW__CELERY__BROKER_URL: redis://:@redis:6379/0
     # Key for encrypting data
@@ -80,13 +80,18 @@ x-airflow-common:
     # NOTE 2: Single underscores are used for Airflow to read connections/ variables
     # Connection can be written as URI: 
     # AIRFLOW_CONN_{CONN_ID}='my-conn-type://login:password@host:port/schema?param1=val1&param2=val2'
-    # Connection to an external PostgreSQL database needed to store the data from the ELT process
-    AIRFLOW_CONN_POSTGRES_DB_YT_ELT: 'postgresql://${ELT_DATABASE_USERNAME}:${ELT_DATABASE_PASSWORD}@${POSTGRES_CONN_HOST}:${POSTGRES_CONN_PORT}/${ELT_DATABASE_NAME}'
+    # Connection to Supabase (ELT data)
+    AIRFLOW_CONN_POSTGRES_DB_YT_ELT: 'postgresql://${SUPABASE_USER}:${SUPABASE_PASSWORD}@${SUPABASE_HOST}:${SUPABASE_PORT}/${SUPABASE_DB}'
     # Variables can be written as follows: 
     # AIRFLOW_VAR_{VARIABLE_NAME}
     AIRFLOW_VAR_API_KEY: ${API_KEY}
     AIRFLOW_VAR_CHANNEL_HANDLE: ${CHANNEL_HANDLE}
-    # Postgres databases environment variables - Needed for integration and data quality tests
+    # Supabase / ELT env - needed for integration and data quality tests
+    SUPABASE_HOST: ${SUPABASE_HOST}
+    SUPABASE_PORT: ${SUPABASE_PORT}
+    SUPABASE_DB: ${SUPABASE_DB}
+    SUPABASE_USER: ${SUPABASE_USER}
+    SUPABASE_PASSWORD: ${SUPABASE_PASSWORD}
     ELT_DATABASE_NAME: ${ELT_DATABASE_NAME}
     ELT_DATABASE_USERNAME: ${ELT_DATABASE_USERNAME}
     ELT_DATABASE_PASSWORD: ${ELT_DATABASE_PASSWORD}
@@ -105,44 +110,8 @@ x-airflow-common:
     &airflow-common-depends-on
     redis:
       condition: service_healthy
-    postgres:
-      condition: service_healthy
- 
+
 services:
-  postgres:
-    container_name: postgres
-    image: postgres:13
-    # Use the .env file to read the connection params - SWITCH THIS OFF WHEN USING GITHUB ACTIONS
-    # env_file:
-    #   - .env
-    # Env vars after POSTGRES_PASSWORD are needed for CI-CD workflow - SWITCH THIS ALL ON WHEN USING GITHUB ACTIONS
-    environment:
-      - POSTGRES_USER=${POSTGRES_CONN_USERNAME}
-      - POSTGRES_PASSWORD=${POSTGRES_CONN_PASSWORD}
-      - METADATA_DATABASE_NAME=${METADATA_DATABASE_NAME}
-      - METADATA_DATABASE_USERNAME=${METADATA_DATABASE_USERNAME}
-      - METADATA_DATABASE_PASSWORD=${METADATA_DATABASE_PASSWORD}
-      - ELT_DATABASE_NAME=${ELT_DATABASE_NAME}
-      - ELT_DATABASE_USERNAME=${ELT_DATABASE_USERNAME}
-      - ELT_DATABASE_PASSWORD=${ELT_DATABASE_PASSWORD}
-      - CELERY_BACKEND_NAME=${CELERY_BACKEND_NAME}
-      - CELERY_BACKEND_USERNAME=${CELERY_BACKEND_USERNAME}
-      - CELERY_BACKEND_PASSWORD=${CELERY_BACKEND_PASSWORD}
-      - POSTGRES_CONN_HOST=${POSTGRES_CONN_HOST}
-      - POSTGRES_CONN_PORT=${POSTGRES_CONN_PORT}
-    ports:
-      - 5434:5432
-    volumes:
-      - postgres-db-volume:/var/lib/postgresql/data
-      - ./docker/postgres/init-multiple-databases.sh:/docker-entrypoint-initdb.d/init-multiple-databases.sh
-    # Test connection to 1 of 3 dbs, the metadata db in this case
-    healthcheck:
-      test: ["CMD", "pg_isready", "-U", "${POSTGRES_CONN_USERNAME}", "-d", "${METADATA_DATABASE_NAME}"]
-      interval: 10s
-      retries: 5
-      start_period: 5s
-    restart: always
- 
   redis:
     # Redis is limited to 7.2-bookworm due to licencing change
     # https://redis.io/blog/redis-adopts-dual-source-available-licensing/
@@ -330,5 +299,3 @@ services:
   #     airflow-init:
   #       condition: service_completed_successfully
  
-volumes:
-  postgres-db-volume:
