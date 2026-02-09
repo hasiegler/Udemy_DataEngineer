@@ -43,22 +43,21 @@ def airflow_variable():
 
 @pytest.fixture
 def real_postgres_connection():
+    # ELT DB is in Supabase; use SUPABASE_* when set, else fall back to POSTGRES_* (local)
     dbname = os.getenv("ELT_DATABASE_NAME")
     user = os.getenv("ELT_DATABASE_USERNAME")
     password = os.getenv("ELT_DATABASE_PASSWORD")
-    host = os.getenv("POSTGRES_CONN_HOST")
-    port = os.getenv("POSTGRES_CONN_PORT")
-    
+    host = os.getenv("SUPABASE_HOST") or os.getenv("POSTGRES_CONN_HOST")
+    port = os.getenv("SUPABASE_PORT") or os.getenv("POSTGRES_CONN_PORT") or "5432"
+    sslmode = "require" if os.getenv("SUPABASE_HOST") else None
+
     conn = None
+    connect_kw = dict(dbname=dbname, user=user, password=password, host=host, port=int(port))
+    if sslmode:
+        connect_kw["sslmode"] = sslmode
 
     try:
-        conn = psycopg2.connect(
-            dbname=dbname,
-            user=user,
-            password=password,
-            host=host,
-            port=port
-        )
+        conn = psycopg2.connect(**connect_kw)
         yield conn
     
     except psycopg2.Error as e:

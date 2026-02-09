@@ -22,7 +22,6 @@ create_user_and_database $METADATA_DATABASE_NAME $METADATA_DATABASE_USERNAME $ME
 # Celery result backend database
 create_user_and_database $CELERY_BACKEND_NAME $CELERY_BACKEND_USERNAME $CELERY_BACKEND_PASSWORD
 
-# ELT database
-create_user_and_database $ELT_DATABASE_NAME $ELT_DATABASE_USERNAME $ELT_DATABASE_PASSWORD
+# ELT database lives in Supabase (not local Postgres)
 
-echo "All databases and users created successfully"
+echo "Metadata and Celery databases created successfully"
