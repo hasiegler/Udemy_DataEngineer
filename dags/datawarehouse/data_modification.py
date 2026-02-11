@@ -1,84 +1,81 @@
 import logging
 
+from psycopg2.extras import execute_values
+
 logger = logging.getLogger(__name__)
 table = "yt_api"
 
-def insert_rows(cur, conn, schema, row):
 
+def _staging_row_to_tuple(row):
+    """Map staging API row to table column order."""
+    return (
+        row["video_id"],
+        row["title"],
+        row["publishedAt"],
+        row["duration"],
+        row["viewCount"],
+        row["likeCount"],
+        row["commentCount"],
+    )
+
+
+def _core_row_to_tuple(row):
+    """Map core (transformed) row to table column order."""
+    return (
+        row["Video_ID"],
+        row["Video_Title"],
+        row["Upload_Date"],
+        row["Duration"],
+        row["Video_Type"],
+        row["Video_Views"],
+        row["Likes_Count"],
+        row["Comments_Count"],
+    )
+
+
+def upsert_rows(cur, conn, schema, rows):
+    """
+    Bulk upsert: insert all rows, updating on conflict (Video_ID).
+    Preserves same logic as previous insert_rows/update_rows (staging vs core column mapping).
+    """
+    if not rows:
+        return
     try:
-
-        if schema == 'staging':
-
-            video_id = 'video_id'
-
-            cur.execute(
-                f"""
-                INSERT INTO {schema}.{table} 
-                ("Video_ID", "Video_Title", "Upload_Date", "Duration", "Video_Views", "Likes_Count", "Comments_Count")
-                VALUES (%(video_id)s, %(title)s, %(publishedAt)s, %(duration)s, %(viewCount)s, %(likeCount)s, %(commentCount)s);
-                """, row
+        if schema == "staging":
+            columns = (
+                '"Video_ID", "Video_Title", "Upload_Date", "Duration", '
+                '"Video_Views", "Likes_Count", "Comments_Count"'
             )
-
+            tuples = [_staging_row_to_tuple(row) for row in rows]
+            sql = (
+                f'INSERT INTO {schema}.{table} ({columns}) VALUES %s '
+                f'''ON CONFLICT ("Video_ID") DO UPDATE SET
+                "Video_Title" = EXCLUDED."Video_Title",
+                "Video_Views" = EXCLUDED."Video_Views",
+                "Likes_Count" = EXCLUDED."Likes_Count",
+                "Comments_Count" = EXCLUDED."Comments_Count"
+                '''
+            )
         else:
-
-            video_id = 'Video_ID'
-
-            cur.execute(
-                f"""
-                INSERT INTO {schema}.{table} 
-                ("Video_ID", "Video_Title", "Upload_Date", "Duration", "Video_Type", "Video_Views", "Likes_Count", "Comments_Count")
-                VALUES (%(Video_ID)s, %(Video_Title)s, %(Upload_Date)s, %(Duration)s, %(Video_Type)s, %(Video_Views)s, %(Likes_Count)s, %(Comments_Count)s);
-                """, row
+            columns = (
+                '"Video_ID", "Video_Title", "Upload_Date", "Duration", "Video_Type", '
+                '"Video_Views", "Likes_Count", "Comments_Count"'
             )
-
-        conn.commit()
-
-        logger.info(f"Inserted row with Video_ID: {row[video_id]}")
-    
-    except Exception as e:
-        logger.error(f"Error inserting row with Video_ID: {row[video_id]}")
-        raise e
-
-def update_rows(cur, conn, schema, row):
-
-    try:
-
-        #staging
-        if schema == 'staging':
-            video_id = 'video_id'
-            upload_date = 'publishedAt'
-            video_title = 'title'
-            video_views = 'viewCount'
-            likes_count = 'likeCount'
-            comments_count = 'commentCount'
-        #core
-        else:
-            video_id = 'Video_ID'
-            upload_date = 'Upload_Date'
-            video_title = 'Video_Title'
-            video_views = 'Video_Views'
-            likes_count = 'Likes_Count'
-            comments_count = 'Comments_Count'
-
-        cur.execute(
-            f"""
-            UPDATE {schema}.{table}
-            SET
-                "Video_Title" = %({video_title})s,
-                "Video_Views" = %({video_views})s,
-                "Likes_Count" = %({likes_count})s,
-                "Comments_Count" = %({comments_count})s
-            WHERE "Video_ID" = %({video_id})s
-            AND "Upload_Date" = %({upload_date})s;
-            """, row
+            tuples = [_core_row_to_tuple(row) for row in rows]
+            sql = (
+                f'INSERT INTO {schema}.{table} ({columns}) VALUES %s '
+                f'''ON CONFLICT ("Video_ID") DO UPDATE SET
+                "Video_Title" = EXCLUDED."Video_Title",
+                "Video_Views" = EXCLUDED."Video_Views",
+                "Likes_Count" = EXCLUDED."Likes_Count",
+                "Comments_Count" = EXCLUDED."Comments_Count"
+                '''
             )
-
+        execute_values(cur, sql, tuples, page_size=500)
         conn.commit()
-
-        logger.info(f"Updated row with Video_ID: {row[video_id]}")
-
+        logger.info(f"Upserted {len(rows)} rows into {schema}.{table}")
     except Exception as e:
-        logger.error(f"Error updating row with Video_ID: {row[video_id]} - {e}")
+        logger.error(f"Error bulk upserting into {schema}.{table}: {e}")
         raise e
     
 def delete_rows(cur, conn, schema, ids_to_delete):
