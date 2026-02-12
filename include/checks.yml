@@ -16,3 +16,6 @@ checks for yt_api:
         SELECT COUNT(*)
         FROM ${SCHEMA}.yt_api
         WHERE "Comments_Count" > "Video_Views"
+
+  - freshness("Upload_Date") < 30d:
+          name: Data in this dataset is less than 30 days old
