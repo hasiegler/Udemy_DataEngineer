@@ -19,7 +19,7 @@ def test_dags_integrity(dagbag):
     print(dagbag.import_errors)
 
     #2.
-    expected_dag_ids = ["produce_json", "update_db", "data_quality"]
+    expected_dag_ids = ["yt_elt_pipeline"]
     loaded_dag_ids = list(dagbag.dags.keys())
     print("===========")
     print(dagbag.dags.keys())
@@ -28,15 +28,13 @@ def test_dags_integrity(dagbag):
         assert dag_id in loaded_dag_ids, f"DAG {dag_id} not found in loaded dags"
     
     #3. 
-    assert dagbag.size() == 3
+    assert dagbag.size() == 1
     print("===========")
     print(dagbag.size())
 
     #4.
     expected_task_counts = {
-        "produce_json": 5,
-        "update_db": 3,
-        "data_quality": 2,
+        "yt_elt_pipeline": 8
     } 
 
     print("===========")
