@@ -1,8 +1,10 @@
 import requests
 import json
+import os
 from datetime import date
 
-# import os
+import boto3
+
 # from dotenv import load_dotenv
 # load_dotenv(dotenv_path="./.env")
 
@@ -119,21 +121,22 @@ def extract_video_data(video_ids):
     except requests.exceptions.RequestException as e:
         raise e
     
-from pathlib import Path
-from datetime import date
-import json
-
 @task
 def save_to_json(extracted_data):
-    output_dir = Path("/opt/airflow/data")
-    output_dir.mkdir(parents=True, exist_ok=True)
+    bucket_name = os.environ["S3_BUCKET_NAME"]
+    s3_key = f"data/YT_data_{date.today()}.json"
 
-    file_path = output_dir / f"YT_data_{date.today()}.json"
+    json_data = json.dumps(extracted_data, indent=4, ensure_ascii=False)
 
-    with open(file_path, "w", encoding="utf-8") as json_outfile:
-        json.dump(extracted_data, json_outfile, indent=4, ensure_ascii=False)
+    s3_client = boto3.client("s3")
+    s3_client.put_object(
+        Bucket=bucket_name,
+        Key=s3_key,
+        Body=json_data.encode("utf-8"),
+        ContentType="application/json"
+    )
 
-    return str(file_path)
+    return s3_key
 
 
 

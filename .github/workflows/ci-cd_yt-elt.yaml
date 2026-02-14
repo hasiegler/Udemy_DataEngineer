@@ -71,6 +71,11 @@ jobs:
       ELT_DATABASE_NAME: ${{ secrets.SUPABASE_DB }}
       ELT_DATABASE_USERNAME: ${{ secrets.SUPABASE_USER }}
       ELT_DATABASE_PASSWORD: ${{ secrets.SUPABASE_PASSWORD }}
+      # AWS S3
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      AWS_DEFAULT_REGION: ${{ vars.AWS_DEFAULT_REGION }}
+      S3_BUCKET_NAME: ${{ vars.S3_BUCKET_NAME }}
       # Vars
       AIRFLOW_UID: ${{ vars.AIRFLOW_UID }}
       CHANNEL_HANDLE: ${{ vars.CHANNEL_HANDLE }}
