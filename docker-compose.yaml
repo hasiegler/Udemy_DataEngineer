@@ -95,10 +95,14 @@ x-airflow-common:
     ELT_DATABASE_NAME: ${ELT_DATABASE_NAME}
     ELT_DATABASE_USERNAME: ${ELT_DATABASE_USERNAME}
     ELT_DATABASE_PASSWORD: ${ELT_DATABASE_PASSWORD}
+    # AWS S3 credentials (used by boto3 in DAGs)
+    AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
+    AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
+    AWS_DEFAULT_REGION: ${AWS_DEFAULT_REGION}
+    S3_BUCKET_NAME: ${S3_BUCKET_NAME}
   volumes:
     - ./config:/opt/airflow/config
     - ./dags:/opt/airflow/dags
-    - ./data:/opt/airflow/data
     - ./include:/opt/airflow/include
     - ./logs:/opt/airflow/logs
     - ./plugins:/opt/airflow/plugins
